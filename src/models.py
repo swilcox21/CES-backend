@@ -12,7 +12,6 @@ class User(db.Model):
     city = db.Column(db.String(120), unique=False, nullable=True)
     the_state = db.Column(db.String(120), unique=False, nullable=True)
     zip_code = db.Column(db.String(120), unique=False, nullable=True)
-    is_active = db.Column(db.Boolean(), unique=False, nullable=False)
 
     def __repr__(self):
         return '<User %r>' % self.email
@@ -27,7 +26,6 @@ class User(db.Model):
             "city": self.city,
             "theState": self.the_state,
             "zipCode": self.zip_code,
-            "isActive": self.is_active
             # do not serialize the password, its a security breach
         }
 

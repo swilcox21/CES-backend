@@ -9,6 +9,10 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, User
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    get_jwt_identity
+)
 #from models import Person
 
 app = Flask(__name__)
@@ -19,6 +23,43 @@ MIGRATE = Migrate(app, db)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
+
+# Setup the Flask-JWT-Extended extension
+app.config['JWT_SECRET_KEY'] = 'p=340[tp4q[gp[e9-3q4ygh3qh5dsrf]]]'  # Change this!
+jwt = JWTManager(app)
+
+# Provide a method to create access tokens. The create_access_token()
+# function is used to actually generate the token, and you can return
+# it to the caller however you choose.
+@app.route('/login', methods=['POST'])
+def login():
+    if not request.is_json:
+        return jsonify({"msg": "Missing JSON in request"}), 400
+
+    email = request.json.get('email', None)
+    password = request.json.get('password', None)
+    if not email:
+        return jsonify({"msg": "Missing email parameter"}), 400
+    if not password:
+        return jsonify({"msg": "Missing password parameter"}), 400
+
+    usercheck = User.query.filter_by(email=email).first()
+    if usercheck == None:
+        return jsonify({"msg": "Bad Email"}), 401
+
+    # Identity can be any data that is json serializable
+    access_token = create_access_token(identity=email)
+    return jsonify(access_token=access_token), 200
+
+
+# Protect a view with jwt_required, which requires a valid access token
+# in the request to access.
+@app.route('/protected', methods=['GET'])
+@jwt_required
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -46,12 +87,7 @@ def post_user():
     new_user = User(first_name = body['firstName'],
                     last_name = body['lastName'],
                     email = body['email'],
-                    password = body['password'],
-                    street_address = body['streetAddress'],
-                    city = body['city'],
-                    the_state = body['theState'],
-                    zip_code = body['zipCode'],
-                    is_active = body['is_active'])
+                    password = body['password'])
     db.session.add(new_user)
     db.session.commit()
     user = User.query.filter_by(email=body['email']).first()
